@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/rakyll/command"
-	"github.com/rakyll/drive"
+	"github.com/kennethleepl/drive"
 	"github.com/rakyll/drive/config"
 )
 

@@ -29,6 +29,38 @@ import (
 // It doesn't check if there are local changes if isForce is set.
 func (g *Commands) Push() (err error) {
 	absPath := g.context.AbsPathOf(g.opts.Path)
+
+	var parentDirMkList []*Change
+	var parent *File
+	var pStr string
+	filePath := g.opts.Path
+
+	for pStr != "/" {
+
+		p := strings.Split(filePath, "/")
+		p = append([]string{"/"}, p[:len(p)-1]...)
+		pStr = gopath.Join(p...)
+		parent, err = g.rem.FindByPath(pStr)
+		if err != nil && err != ErrPathNotExists {
+			return err
+		}
+
+		if parent == nil {
+			var change *Change
+        		var l *File
+			pAbsPath := g.context.AbsPathOf(pStr)
+        		localinfo, _ := os.Stat(pAbsPath)
+        		if localinfo != nil {
+                		l = NewLocalFile(pAbsPath, localinfo)
+        		}
+
+			change = &Change{Path: pStr, Src: l, Dest: parent}
+			parentDirMkList = append(parentDirMkList, change)
+		}
+	
+		filePath = pStr
+	}
+
 	r, err := g.rem.FindByPath(g.opts.Path)
 	if err != nil && err != ErrPathNotExists {
 		return err
@@ -39,12 +71,19 @@ func (g *Commands) Push() (err error) {
 	if localinfo != nil {
 		l = NewLocalFile(absPath, localinfo)
 	}
-
+	
 	fmt.Println("Resolving...")
-	var cl []*Change
-	if cl, err = g.resolveChangeListRecv(true, g.opts.Path, r, l); err != nil {
+	var f []*Change
+	if f, err = g.resolveChangeListRecv(true, g.opts.Path, r, l); err != nil {
 		return err
 	}
+
+	var cl []*Change
+        for i := len(parentDirMkList)-1; i >= 0; i-- {
+                cl = append(cl, parentDirMkList[i])
+        }
+
+	cl = append(cl, f...)
 
 	if ok := printChangeList(cl, g.opts.IsNoPrompt); ok {
 		return g.playPushChangeList(cl)
