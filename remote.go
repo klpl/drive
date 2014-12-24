@@ -166,7 +166,8 @@ func (r *Remote) findByPathRecv(parentId string, p []string) (file *File, err er
 	// find the file or directory under parentId and titled with p[0]
 	req := r.service.Files.List()
 	// TODO: use field selectors
-	req.Q(fmt.Sprintf("'%s' in parents and title = '%s' and trashed=false", parentId, p[0]))
+	title := strings.Replace(p[0], "'", "\\'", -1)
+	req.Q(fmt.Sprintf("'%s' in parents and title = '%s' and trashed=false", parentId, title))
 	files, err := req.Do()
 	if err != nil || len(files.Items) < 1 {
 		// TODO: make sure only 404s are handled here
